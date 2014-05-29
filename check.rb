@@ -38,8 +38,6 @@ reservations.each do |type, count|
   unreserved_instances[type] = 0 if unreserved_instances[type] < 0
 end
 
-total = instances.map { |_, count| count }.reduce(:+)
-
 table = Terminal::Table.new(headings: ['Type', 'Unused Reservations',
                                        'Unreserved Units',
                                        'Total Reservations', 'Total Units'])
