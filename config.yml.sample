@@ -1,0 +1,6 @@
+regions:
+  - us-east-1
+  - us-west-1
+  - eu-west-1
+access_key_id: xyz
+secret_access_key: xyz
