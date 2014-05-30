@@ -14,8 +14,8 @@ Clone the repo and install the required Gems with bundler:
     bundle
 
 Copy the `config.yml.sample` to `config.yml` and customize it with the regions
-you'd like to check and the AWS access keys you'd like to use. Then just run
-the tool and view the gorgeous output:
+and products you'd like to check and the AWS access keys you'd like to use.
+Then just run the tool and view the gorgeous output:
 
     ./check.rb
 
@@ -48,7 +48,9 @@ usage. It's strongly recommended you use this and not a key for anything else.
           "Effect": "Allow",
           "Action": [
             "ec2:DescribeInstances",
-            "ec2:DescribeReservedInstances"
+            "ec2:DescribeReservedInstances",
+            "rds:DescribeDBInstances",
+            "rds:DescribeReservedDBInstances"
           ],
           "Resource": [
             "*"

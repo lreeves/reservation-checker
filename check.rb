@@ -10,36 +10,61 @@ require 'yaml'
 
 config = YAML.load_file('config.yml')
 
-ec2_connections = {}
-regions = config['regions']
-regions.each do |region|
-  ec2_connections[region] = AWS::EC2.new(
-    access_key_id: config['access_key_id'],
-    secret_access_key: config['secret_access_key'],
-    region: region)
+def check_ec2(config, reservations, instances)
+  config['regions'].each do |region|
+    connection = AWS::EC2.new(
+      access_key_id: config['access_key_id'],
+      secret_access_key: config['secret_access_key'],
+      region: region)
+
+    connection.reserved_instances.select { |x| x.state == 'active' }.each do |ri|
+      type = 'ec2:' + ri.instance_type + ':' + ri.availability_zone
+      reservations[type] += ri.instance_count
+    end
+
+    connection.instances.select { |x| x.status == :running }.each do |i|
+      type = 'ec2:' + i.instance_type + ':' + i.availability_zone
+      instances[type] += 1
+    end
+  end
+end
+
+def check_rds(config, reservations, instances)
+  config['regions'].each do |region|
+    connection = AWS::RDS.new(
+      access_key_id: config['access_key_id'],
+      secret_access_key: config['secret_access_key'],
+      region: region)
+
+    connection.client.describe_reserved_db_instances.data[:reserved_db_instances].each do |i|
+      type = 'rds:' + i[:product_description] + ':' + i[:db_instance_class]
+      type += '-multi_az' if i[:multi_az]
+      type += ':' + region
+      reservations[type] += i[:db_instance_count]
+    end
+
+    connection.client.describe_db_instances.data[:db_instances].each do |i|
+      type = 'rds:' + i[:engine] + ':' + i[:db_instance_class]
+      type += '-multi_az' if i[:multi_az]
+      type += ':' + region
+      instances[type] += 1
+    end
+  end
 end
 
 reservations = Hash.new(0)
 instances = Hash.new(0)
 
-ec2_connections.each do |_, connection|
-  connection.reserved_instances.select { |x| x.state == 'active' }.each do |ri|
-    type = 'ec2:' + ri.instance_type + ':' + ri.availability_zone
-    reservations[type] += ri.instance_count
-  end
-end
+check_ec2(config, reservations, instances) if config['products'].include? 'ec2'
+check_rds(config, reservations, instances) if config['products'].include? 'rds'
 
 unused_reservations = reservations.clone
-
-ec2_connections.each do |_, connection|
-  connection.instances.select { |x| x.status == :running }.each do |i|
-    type = 'ec2:' + i.instance_type + ':' + i.availability_zone
-    unused_reservations[type] -= 1 unless unused_reservations[type] <= 0
-    instances[type] += 1
-  end
-end
-
 unreserved_instances = instances.clone
+
+instances.each do |type, count|
+  unused_reservations[type] -= count
+  unused_reservations[type] = 0 if unused_reservations[type] < 0
+end
 
 reservations.each do |type, count|
   unreserved_instances[type] -= count
