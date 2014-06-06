@@ -1,5 +1,6 @@
 products:
   - ec2
+  - elasticache
   - rds
 regions:
   - us-east-1
