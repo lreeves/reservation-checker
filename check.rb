@@ -29,6 +29,30 @@ def check_ec2(config, reservations, instances)
   end
 end
 
+def check_elasticache(config, reservations, instances)
+  config['regions'].each do |region|
+    connection = AWS::ElastiCache.new(
+      access_key_id: config['access_key_id'],
+      secret_access_key: config['secret_access_key'],
+      region: region)
+
+    connection.client.describe_reserved_cache_nodes.data[:reserved_cache_nodes].each do |i|
+      next unless i[:state] == 'active'
+      type = 'elasticache:' + i[:product_description] + ':' + i[:cache_node_type]
+      type << ':' << region
+      reservations[type] += 1
+    end
+
+    connection.client.describe_cache_clusters.data[:cache_clusters].each do |i|
+      next unless i[:cache_cluster_status] == 'available'
+
+      type = 'elasticache:' + i[:engine] + ':' + i[:cache_node_type]
+      type += ':' + region
+      instances[type] += 1
+    end
+  end
+end
+
 def check_rds(config, reservations, instances)
   config['regions'].each do |region|
     connection = AWS::RDS.new(
@@ -57,6 +81,7 @@ instances = Hash.new(0)
 
 check_ec2(config, reservations, instances) if config['products'].include? 'ec2'
 check_rds(config, reservations, instances) if config['products'].include? 'rds'
+check_elasticache(config, reservations, instances) if config['products'].include? 'elasticache'
 
 unused_reservations = reservations.clone
 unreserved_instances = instances.clone
@@ -74,7 +99,9 @@ end
 table = Terminal::Table.new(headings: ['Type', 'Unused Reservations',
                                        'Unreserved Units',
                                        'Total Reservations', 'Total Units'])
-instances.keys.sort.each do |type|
+
+types = instances.keys + reservations.keys
+types.uniq.sort.each do |type|
   table.add_row [type,
                  unused_reservations[type],
                  unreserved_instances[type],
