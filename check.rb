@@ -76,37 +76,40 @@ def check_rds(config, reservations, instances)
   end
 end
 
-reservations = Hash.new(0)
-instances = Hash.new(0)
+AWS.memoize do
 
-check_ec2(config, reservations, instances) if config['products'].include? 'ec2'
-check_rds(config, reservations, instances) if config['products'].include? 'rds'
-check_elasticache(config, reservations, instances) if config['products'].include? 'elasticache'
+  reservations = Hash.new(0)
+  instances = Hash.new(0)
 
-unused_reservations = reservations.clone
-unreserved_instances = instances.clone
+  check_ec2(config, reservations, instances) if config['products'].include? 'ec2'
+  check_rds(config, reservations, instances) if config['products'].include? 'rds'
+  check_elasticache(config, reservations, instances) if config['products'].include? 'elasticache'
 
-instances.each do |type, count|
-  unused_reservations[type] -= count
-  unused_reservations[type] = 0 if unused_reservations[type] < 0
+  unused_reservations = reservations.clone
+  unreserved_instances = instances.clone
+
+  instances.each do |type, count|
+    unused_reservations[type] -= count
+    unused_reservations[type] = 0 if unused_reservations[type] < 0
+  end
+
+  reservations.each do |type, count|
+    unreserved_instances[type] -= count
+    unreserved_instances[type] = 0 if unreserved_instances[type] < 0
+  end
+
+  table = Terminal::Table.new(headings: ['Type', 'Unused Reservations',
+                                         'Unreserved Units',
+                                         'Total Reservations', 'Total Units'])
+
+  types = instances.keys + reservations.keys
+  types.uniq.sort.each do |type|
+    table.add_row [type,
+                   unused_reservations[type],
+                   unreserved_instances[type],
+                   reservations[type],
+                   instances[type]]
+  end
+
+  puts table
 end
-
-reservations.each do |type, count|
-  unreserved_instances[type] -= count
-  unreserved_instances[type] = 0 if unreserved_instances[type] < 0
-end
-
-table = Terminal::Table.new(headings: ['Type', 'Unused Reservations',
-                                       'Unreserved Units',
-                                       'Total Reservations', 'Total Units'])
-
-types = instances.keys + reservations.keys
-types.uniq.sort.each do |type|
-  table.add_row [type,
-                 unused_reservations[type],
-                 unreserved_instances[type],
-                 reservations[type],
-                 instances[type]]
-end
-
-puts table
