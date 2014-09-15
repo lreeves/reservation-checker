@@ -76,14 +76,39 @@ def check_rds(config, reservations, instances)
   end
 end
 
+def check_redshift(config, reservations, instances)
+  config['regions'].each do |region|
+    connection = AWS::Redshift.new(
+      access_key_id: config['access_key_id'],
+      secret_access_key: config['secret_access_key'],
+      region: region)
+
+    connection.client.describe_reserved_nodes.data[:reserved_nodes].each do |i|
+      p i
+      type = 'redshift:' + i[:node_type]
+      type += ':' + region
+      reservations[type] += i[:node_count]
+    end
+
+    connection.client.describe_clusters.data[:clusters].
+      select { |i| i[:cluster_status] == 'available' }.each do |i|
+
+      type = 'redshift:' + i[:node_type]
+      type += ':' + region
+      instances[type] += i[:number_of_nodes]
+    end
+  end
+end
+
 AWS.memoize do
 
   reservations = Hash.new(0)
   instances = Hash.new(0)
 
   check_ec2(config, reservations, instances) if config['products'].include? 'ec2'
-  check_rds(config, reservations, instances) if config['products'].include? 'rds'
   check_elasticache(config, reservations, instances) if config['products'].include? 'elasticache'
+  check_rds(config, reservations, instances) if config['products'].include? 'rds'
+  check_redshift(config, reservations, instances) if config['products'].include? 'redshift'
 
   unused_reservations = reservations.clone
   unreserved_instances = instances.clone
