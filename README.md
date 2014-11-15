@@ -52,7 +52,9 @@ usage. It's strongly recommended you use this and not a key for anything else.
             "elasticache:DescribeCacheClusters",
             "elasticache:DescribeReservedCacheNodes",
             "rds:DescribeDBInstances",
-            "rds:DescribeReservedDBInstances"
+            "rds:DescribeReservedDBInstances",
+            "redshift:DescribeClusters",
+            "redshift:DescribeReservedNodes"
           ],
           "Resource": [
             "*"
