@@ -84,7 +84,6 @@ def check_redshift(config, reservations, instances)
       region: region)
 
     connection.client.describe_reserved_nodes.data[:reserved_nodes].each do |i|
-      p i
       type = 'redshift:' + i[:node_type]
       type += ':' + region
       reservations[type] += i[:node_count]
