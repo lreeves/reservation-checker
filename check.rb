@@ -64,7 +64,7 @@ def check_rds(config, reservations, instances)
       type = 'rds:' + i[:product_description] + ':' + i[:db_instance_class]
       type += '-multi_az' if i[:multi_az]
       type += ':' + region
-      reservations[type] += i[:db_instance_count]
+      reservations[type.gsub('postgresql', 'postgres')] += i[:db_instance_count]
     end
 
     connection.client.describe_db_instances.data[:db_instances].each do |i|
