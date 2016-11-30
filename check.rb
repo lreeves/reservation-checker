@@ -19,11 +19,25 @@ def check_ec2(config, reservations, instances)
 
     connection.reserved_instances.select { |x| x.state == 'active' }.each do |ri|
       type = 'ec2:' + ri.instance_type + ':' + ri.availability_zone
+      puts "Reservation data for #{type}"
+      puts ri.to_yaml
+      #unless ri.vpc_id.nil?
+      #  type = 'ec2:' + ri.instance_type + ':' + ri.availability_zone + ':vpc'
+      #else
+      #  type = 'ec2:' + ri.instance_type + ':' + ri.availability_zone
+      #end
       reservations[type] += ri.instance_count
     end
 
     connection.instances.select { |x| x.status == :running }.each do |i|
-      type = 'ec2:' + i.instance_type + ':' + i.availability_zone
+      #type = 'ec2:' + i.instance_type + ':' + i.availability_zone
+      #puts "Instance data for #{type}"
+      #puts i.to_yaml
+      if i.vpc_id.nil?
+        type = 'ec2:' + i.instance_type + ':' + i.availability_zone
+      else
+        type = 'ec2:' + i.instance_type + ':' + i.availability_zone + ":vpc"
+      end
       instances[type] += 1
     end
   end
